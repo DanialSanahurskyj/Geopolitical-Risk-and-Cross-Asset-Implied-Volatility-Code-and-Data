@@ -1,0 +1,58 @@
+Geopolitical Risk and Cross-Asset Implied Volatility: Evidence from Equity, Oil, and Gold Options
+
+Danial Sanahurskyj - Indiana University, Kelley School of Business
+Supervised by Dr. Russell Rhoads and Dr. Karim Farroukh
+
+#Overview#
+This paper examines how geopolitical shocks distort implied volatility, through analyzing aggregate volatility, skew and smiles, and volatility surfaces, through equity, oil, and gold options contracts. Using a unified cross-asset event study framework, we find that geopolitical fear transmits through structurally distinct channels in each asset class, producing characteristic implied volatility signatures that are predictable from the nature of the shock.
+
+#Key Findings#
+Gold exhibits the largest and most persistent surface distortion out of the three assets, consistent with gold functioning as a universal safe-haven. Distortions concentrate in the call side, meanings investors express geopolitical dear through upside call buying.
+
+Equities exhibit a counterintuitive deflation pattern. Implied volatility rises in anticipation of events, and follows below the baseline within two trading days. Consistent with the popular "buy the rumor, sell the news" notion on Wall Street, where uncertainty is priced in during the buildup and unwound upon realization.
+
+Oil shows a moderate but persistent distortion, consistent with supply-risk repricing that does not fully revert within the measurement window. Volatility concentrates in the tail end of the volatility surfaces, factoring in a large singular move in either direction when uncertainty arises. 
+
+#Data#
+
+Assets: Equities (SPY), Oil (USO), Gold (IAU)
+
+Sample Period: January 1, 2010 - December 31, 2019
+
+Events Identified: 75 geopolitical events
+
+Data Source: OptionMetrics via WRDS, daily GPR index from Caldara and Iacoviello: https://www.matteoiacoviello.com/gpr.htm
+
+*Raw OptionMetrics data are excluded due to licensing restrictions. The repository provides the full processing and analysis pipeline used in the paper, assuming the required WRDS/OptionMetrics files are placed in the appropriate raw data directory.*
+
+#Methodology#
+
+Event Identification: Daily GPR readings that exceed the 95th percentile, with a 7-day clustering to group prolonged events, and measured using the peak GPR rating
+
+Abnormal Implied Volatility (AIV): Percent deviation of peak post-event IV from the 20-day pre-event baseline, adapted from MacKinlay (1997)
+
+Surface Distortion Index (SDI): Mean absolute AIV across a 50-point delta tenor grid
+
+Smile Asymmetry: Difference between put skew and call skew at the 30-day tenor
+
+Statistical tests: One-sample t-tests, Pearson correlation
+
+#AI Disclosure#
+
+Claude Code was used to assist with code generation, refactoring, documentation, and workflow organization. All research design choices, data cleaning decisions, statistical specifications, empirical interpretation, and final results were reviewed and validated by the author.
+
+#Citation#
+
+If you use this code or data in your research, please cite:
+
+Sanahurskyj, D. (2026). Geopolitical Risk and Cross-Asset Implied Volatility:
+Evidence from Equity, Oil, and Gold Options. Indiana University,
+Kelley School of Business. Supervised by Dr. Russell Rhoads and Dr. Karim Farroukh.
+
+#Contanct#
+
+Danial Sanahurskyj
+
+Indiana University - Kelley School of Business 
+
+Email: danial.sanahurskyj2@gmail.com
