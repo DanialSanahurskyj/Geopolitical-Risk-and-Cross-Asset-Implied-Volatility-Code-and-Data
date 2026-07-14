@@ -158,6 +158,10 @@ def drop_first_event(events_df: pd.DataFrame) -> pd.DataFrame:
     This reduces the sample from 76 to 75 usable events.
     """
     before = len(events_df)
+    # Cutoff excludes the early-January 2010 event: the options sample
+    # begins 2010-01-01, so events in the first weeks of the sample lack
+    # the required 20-trading-day pre-event baseline (see PRE_WINDOW in
+    # 03_aiv_computation.py). Reduces the sample from 76 to 75 events.
     events_df = events_df[events_df["date"] >= "2010-01-22"].copy()
     print(f"\nDropped {before - len(events_df)} event(s) with insufficient pre-event data.")
     print(f"Final usable events: {len(events_df)}")
