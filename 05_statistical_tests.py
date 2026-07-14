@@ -202,9 +202,16 @@ def test_gpr_correlation(aiv_df: pd.DataFrame,
 def compute_asymmetry(df: pd.DataFrame, event_dates: pd.DatetimeIndex,
                        ticker: str) -> pd.DataFrame:
     """
-    Asymmetry = SKEW(put) - SKEW(call) at 30-day tenor.
+    Asymmetry = SKEW(put) − SKEW(call) at the 30-day tenor.
     SKEW(put)  = IV(Δ=-25, τ=30) − IV(Δ=-50, τ=30)
     SKEW(call) = IV(Δ=+25, τ=30) − IV(Δ=+50, τ=30)
+
+    Sign convention: a NEGATIVE change on event days indicates the smile
+    tilting toward calls (call skew intensifying relative to put skew) —
+    the safe-haven call-buying channel documented for IAU in Section 3.
+
+    The event-day sample is compared against NON-event days (not the full
+    period) so the two-sample t-test is run on disjoint samples.
     """
     def get_iv(flag, delta, tenor):
         mask = (df["cp_flag"]==flag) & (df["delta"]==delta) & (df["tenor"]==tenor)
@@ -220,14 +227,16 @@ def compute_asymmetry(df: pd.DataFrame, event_dates: pd.DatetimeIndex,
            (c25.reindex(all_dates) - c50.reindex(all_dates))
     asym = asym.dropna()
 
-    all_asym   = asym
-    event_asym = asym[asym.index.isin(event_dates)]
+    is_event      = asym.index.isin(event_dates)
+    all_asym      = asym                    # full period (reported for reference)
+    event_asym    = asym[is_event]
+    nonevent_asym = asym[~is_event]
 
     t_all,   p_all   = stats.ttest_1samp(all_asym,   popmean=0)
     t_event, p_event = stats.ttest_1samp(event_asym, popmean=0)
 
-    # Test: event-day asymmetry different from full-period
-    t_diff, p_diff = stats.ttest_ind(event_asym, all_asym, equal_var=False)
+    # Two-sample test on disjoint samples: event days vs. non-event days
+    t_diff, p_diff = stats.ttest_ind(event_asym, nonevent_asym, equal_var=False)
 
     return pd.DataFrame([{
         "ticker":           ticker,
@@ -271,9 +280,6 @@ def main():
     aiv_df    = pd.read_csv(os.path.join(DATA_DIR, "aiv_aggregate.csv"), parse_dates=["event_date"])
     sdi_df    = pd.read_csv(os.path.join(DATA_DIR, "sdi.csv"),           parse_dates=["event_date"])
     events_df = pd.read_csv(os.path.join(DATA_DIR, "events.csv"),        parse_dates=["date"])
-
-    # Rename for merge compatibility
-    events_df = events_df.rename(columns={"gpr_peak": "gpr_peak"})
 
     t1 = test_aiv(aiv_df)
     t2 = test_cross_asset(aiv_df)
