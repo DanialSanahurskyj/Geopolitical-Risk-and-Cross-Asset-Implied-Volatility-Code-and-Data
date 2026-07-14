@@ -5,6 +5,9 @@ Constructs the Surface Distortion Index (SDI) for each event and asset.
 
 SDI = (1/N) × Σ |AIV(i)|
 
+Where N is the number of available (non-null) surface points in the SDI
+grid defined below. See paper Section 2 for the exact grid specification.
+
 Absolute value is used so that rising and falling surface points both
 contribute to distortion magnitude — signed averaging would allow
 cancellation and understate the true surface disruption.
@@ -24,12 +27,20 @@ import os
 
 DATA_DIR = "data"
 
-# ── SDI surface grid (matches paper Section 2) ─────────────────────────────────
-# 5 put deltas × 5 tenors + 5 call deltas × 5 tenors = 50 points
+# ── SDI surface grid ───────────────────────────────────────────────────────────
+# TODO(grid-spec): Reconcile with paper Section 2 before SSRN posting.
+#   Paper text specifies a 70-point grid (7 deltas × 5 tenors × puts and calls).
+#   The upstream pipeline (03_aiv_computation.py) generates 5 put deltas +
+#   5 call deltas × 4 tenors = 40 points (the 365-day tenor and the ±15/±85
+#   deltas are not produced). Confirm which grid generated the published SDI
+#   results and align the paper text and this definition accordingly.
+#
+# Tenors below intentionally match the upstream surface (03_aiv_computation.py)
+# so the filter operates on points that actually exist.
 
 SDI_PUT_DELTAS  = [-75, -65, -50, -35, -25]
 SDI_CALL_DELTAS = [ 25,  35,  50,  65,  75]
-SDI_TENORS      = [30, 60, 91, 182, 365]     # 5 tenors; adjust if 365d not available
+SDI_TENORS      = [30, 60, 91, 182]
 
 ASSETS = ["SPY", "USO", "IAU"]
 
@@ -42,7 +53,7 @@ def load_aiv_surface() -> pd.DataFrame:
 
 
 def filter_sdi_grid(df: pd.DataFrame) -> pd.DataFrame:
-    """Keep only the 50-point SDI grid defined above."""
+    """Keep only the surface points in the SDI grid defined above."""
     put_mask  = (df["cp_flag"] == "P") & (df["delta"].isin(SDI_PUT_DELTAS))  & (df["tenor"].isin(SDI_TENORS))
     call_mask = (df["cp_flag"] == "C") & (df["delta"].isin(SDI_CALL_DELTAS)) & (df["tenor"].isin(SDI_TENORS))
     df = df[put_mask | call_mask].copy()
@@ -68,8 +79,9 @@ def compute_sdi(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    # Flag events where fewer than 40 of 50 points are available
-    sdi["low_coverage"] = sdi["n_points"] < 40
+    # Flag events with less than 80% of the SDI grid available
+    grid_size = (len(SDI_PUT_DELTAS) + len(SDI_CALL_DELTAS)) * len(SDI_TENORS)
+    sdi["low_coverage"] = sdi["n_points"] < 0.8 * grid_size
 
     print(f"\nSDI computed: {len(sdi)} event-asset pairs")
     for ticker in ASSETS:
