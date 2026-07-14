@@ -2,7 +2,7 @@
 01_data_cleaning.py
 -------------------
 Cleans and filters raw OptionMetrics implied volatility surface data
-for SPY, USO, and IAU across January 1, 2010 – December 31, 2019.
+for SPY, USO, and IAU across January 1, 2010 - December 31, 2019.
 
 Inputs  (place in data/raw/):
     spy_surface.csv
@@ -39,7 +39,12 @@ ASSETS = {
 START_DATE  = "2010-01-01"
 END_DATE    = "2019-12-31"
 
-# Delta points used in the paper (put side negative, call side positive)
+# Full surface grid retained at the cleaning stage (paper Section 2):
+# 7 put deltas + 7 call deltas x 5 tenors = 70 surface points.
+# NOTE: Downstream analysis (03_aiv_computation.py) intentionally narrows
+# this to 5 deltas x 4 tenors per side, excluding the +/-10 and +/-90 deltas
+# and the 10-day tenor due to elevated null rates in deep-OTM short-dated
+# contracts (see report_null_rates below and paper Section 2).
 PUT_DELTAS  = [-90, -75, -65, -50, -35, -25, -10]
 CALL_DELTAS = [ 10,  25,  35,  50,  65,  75,  90]
 ALL_DELTAS  = PUT_DELTAS + CALL_DELTAS
@@ -57,8 +62,22 @@ def load_raw(ticker: str, filename: str) -> pd.DataFrame:
     # Standardize column names to lowercase
     df.columns = df.columns.str.strip().str.lower()
 
-    # Parse date
-    df["date"] = pd.to_datetime(df["date"], format="%Y%m%d", errors="coerce")
+    # Parse date. OptionMetrics exports use YYYYMMDD; fall back to a
+    # general parse for re-exported files (e.g. ISO dates), and fail
+    # loudly rather than silently dropping the entire sample downstream.
+    raw_dates  = df["date"].copy()
+    df["date"] = pd.to_datetime(raw_dates, format="%Y%m%d", errors="coerce")
+    if df["date"].isna().all():
+        df["date"] = pd.to_datetime(raw_dates, errors="coerce")
+    n_nat = df["date"].isna().sum()
+    if n_nat == len(df):
+        raise ValueError(
+            f"[{ticker}] Date parsing failed for every row in {filename}. "
+            "Check the raw file's date format (expected YYYYMMDD)."
+        )
+    if n_nat > 0:
+        print(f"[{ticker}] WARNING: {n_nat:,} rows with unparseable dates dropped")
+        df = df[df["date"].notna()].copy()
 
     # Coerce numeric fields
     df["impl_volatility"] = pd.to_numeric(df["impl_volatility"], errors="coerce")
@@ -76,7 +95,7 @@ def filter_date_range(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
     """Restrict to study sample period."""
     mask = (df["date"] >= START_DATE) & (df["date"] <= END_DATE)
     df   = df[mask].copy()
-    print(f"[{ticker}] After date filter ({START_DATE} – {END_DATE}): {len(df):,} rows")
+    print(f"[{ticker}] After date filter ({START_DATE} - {END_DATE}): {len(df):,} rows")
     return df
 
 
@@ -140,6 +159,8 @@ def report_null_rates(df: pd.DataFrame, ticker: str) -> None:
     Print null rates at the 10-day tenor by delta point.
     As noted in the paper, deep OTM short-dated contracts have elevated
     null rates (12.6% SPY, 20.2% USO, 64.5% IAU) due to thin liquidity.
+    These null rates motivate excluding the 10-day tenor from the AIV
+    surface computation in 03_aiv_computation.py.
     """
     total_dates = df["date"].nunique()
     short       = df[df["tenor"] == 10]
@@ -164,7 +185,7 @@ def clean_asset(ticker: str, filename: str) -> pd.DataFrame:
 
     out_path = os.path.join(CLEAN_DIR, f"{ticker.lower()}_clean.csv")
     df.to_csv(out_path, index=False)
-    print(f"[{ticker}] Saved {len(df):,} clean rows → {out_path}\n")
+    print(f"[{ticker}] Saved {len(df):,} clean rows -> {out_path}\n")
     return df
 
 
