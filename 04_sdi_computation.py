@@ -5,11 +5,6 @@ Constructs the Surface Distortion Index (SDI) for each event and asset.
 
 SDI = (1/N) × Σ |AIV(i)|
 
-Where N = 50 surface points (5 put deltas × 5 tenors + 5 call deltas × 5 tenors... 
-wait — the paper uses 5 delta points × 5 tenors × 2 sides = 40 for the SDI grid,
-but reports a 50-point grid. We use 5 put deltas + 5 call deltas × 5 tenors = 50.
-See paper Section 2 for exact specification.)
-
 Absolute value is used so that rising and falling surface points both
 contribute to distortion magnitude — signed averaging would allow
 cancellation and understate the true surface disruption.
