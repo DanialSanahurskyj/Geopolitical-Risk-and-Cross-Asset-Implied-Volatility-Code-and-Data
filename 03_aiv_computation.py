@@ -49,9 +49,9 @@ REF_TENOR = 30
 REF_FLAG  = "P"
 
 # Surface points used for SDI (passed to 04_sdi_computation.py)
-PUT_DELTAS  = [-90, -75, -65, -50, -35, -25, -10]
-CALL_DELTAS = [10, 25,  35,  50,  65,  75, 90]
-TENORS      = [10, 30, 60, 91, 182]      # Exclude 10-day due to elevated null rates
+PUT_DELTAS  = [-75, -65, -50, -35, -25]
+CALL_DELTAS = [ 25,  35,  50,  65,  75]
+TENORS      = [30, 60, 91, 182]      # Exclude 10-day due to elevated null rates
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 
@@ -243,13 +243,17 @@ def compute_event_window(df_asset: pd.DataFrame,
     df_window = pd.DataFrame(records)
 
     # Normalize: express each day's IV relative to the pre-event mean for that event
-    def normalize(grp):
-        pre_mean = grp[grp["rel_day"] < 0]["iv"].mean()
-        grp["iv_normalized"] = grp["iv"] / pre_mean * 100 if pre_mean > 0 else np.nan
-        grp["pre_mean_iv"]   = pre_mean
-        return grp
-
-    df_window = df_window.groupby("event_id", group_keys=False).apply(normalize)
+    pre_means = (
+        df_window[df_window["rel_day"] < 0]
+        .groupby("event_id")["iv"]
+        .mean()
+    )
+    df_window["pre_mean_iv"]   = df_window["event_id"].map(pre_means)
+    df_window["iv_normalized"] = np.where(
+        df_window["pre_mean_iv"] > 0,
+        df_window["iv"] / df_window["pre_mean_iv"] * 100,
+        np.nan,
+    )
     print(f"[{ticker}] Event window trajectory computed: {len(df_window):,} rows")
     return df_window
 
