@@ -49,9 +49,9 @@ REF_TENOR = 30
 REF_FLAG  = "P"
 
 # Surface points used for SDI (passed to 04_sdi_computation.py)
-PUT_DELTAS  = [-75, -65, -50, -35, -25]
-CALL_DELTAS = [ 25,  35,  50,  65,  75]
-TENORS      = [30, 60, 91, 182]      # Exclude 10-day due to elevated null rates
+PUT_DELTAS  = [-90, -75, -65, -50, -35, -25, -10]
+CALL_DELTAS = [10, 25,  35,  50,  65,  75, 90]
+TENORS      = [10, 30, 60, 91, 182]      # Exclude 10-day due to elevated null rates
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 
